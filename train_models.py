@@ -28,6 +28,139 @@ print(df.head())
 print("\nMissing values:")
 print(df.isnull().sum())
 
+# ================= EDA =================
+print("\n" + "="*50)
+print("📊 EXPLORATORY DATA ANALYSIS")
+print("="*50)
+
+# Basic statistics
+print("\n📌 Descriptive Statistics:")
+print(df.describe())
+
+# Value counts for categorical columns
+cat_cols_raw = ['gender', 'race/ethnicity', 'parental level of education',
+                'lunch', 'test preparation course']
+print("\n📌 Categorical Column Distributions:")
+for col in cat_cols_raw:
+    print(f"\n{col}:\n{df[col].value_counts()}")
+
+# Score distributions
+print("\n📌 Score Distributions (Histograms):")
+fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+score_cols = ['math score', 'reading score', 'writing score']
+for i, col in enumerate(score_cols):
+    axes[i].hist(df[col], bins=20, color='steelblue', edgecolor='black')
+    axes[i].set_title(f'Distribution of {col}')
+    axes[i].set_xlabel('Score')
+    axes[i].set_ylabel('Frequency')
+plt.tight_layout()
+plt.savefig('student_models/score_distributions.png')
+plt.show()
+
+# Correlation heatmap
+print("\n📌 Correlation Heatmap:")
+plt.figure(figsize=(8, 5))
+sns.heatmap(df[score_cols].corr(), annot=True, fmt=".2f", cmap='coolwarm')
+plt.title("Correlation Heatmap - Score Columns")
+plt.tight_layout()
+plt.savefig('student_models/correlation_heatmap.png')
+plt.show()
+
+# Box plots for scores
+print("\n📌 Box Plots for Score Columns:")
+plt.figure(figsize=(8, 5))
+df[score_cols].plot(kind='box', patch_artist=True)
+plt.title("Box Plot - Math, Reading, Writing Scores")
+plt.tight_layout()
+plt.savefig('student_models/boxplots_scores.png')
+plt.show()
+
+# Score by gender
+print("\n📌 Scores by Gender:")
+fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+for i, col in enumerate(score_cols):
+    df.groupby('gender')[col].mean().plot(kind='bar', ax=axes[i], color=['coral', 'steelblue'])
+    axes[i].set_title(f'Avg {col} by Gender')
+    axes[i].set_ylabel('Mean Score')
+    axes[i].tick_params(axis='x', rotation=0)
+plt.tight_layout()
+plt.savefig('student_models/scores_by_gender.png')
+plt.show()
+
+# Score by test preparation course
+print("\n📌 Scores by Test Preparation Course:")
+fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+for i, col in enumerate(score_cols):
+    df.groupby('test preparation course')[col].mean().plot(kind='bar', ax=axes[i], color=['salmon', 'mediumseagreen'])
+    axes[i].set_title(f'Avg {col} by Test Prep')
+    axes[i].set_ylabel('Mean Score')
+    axes[i].tick_params(axis='x', rotation=0)
+plt.tight_layout()
+plt.savefig('student_models/scores_by_testprep.png')
+plt.show()
+
+# Pairplot for score relationships
+print("\n📌 Pairplot for Score Columns:")
+sns.pairplot(df[score_cols])
+plt.suptitle("Pairplot - Score Relationships", y=1.02)
+plt.tight_layout()
+plt.savefig('student_models/pairplot_scores.png')
+plt.show()
+
+# ================= IQR OUTLIER DETECTION =================
+print("\n" + "="*50)
+print("📌 IQR OUTLIER DETECTION")
+print("="*50)
+
+outlier_summary = {}
+
+for col in score_cols:
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+
+    outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)]
+    outlier_summary[col] = {
+        'Q1': Q1, 'Q3': Q3, 'IQR': IQR,
+        'Lower Bound': lower_bound,
+        'Upper Bound': upper_bound,
+        'Outlier Count': len(outliers)
+    }
+
+    print(f"\n{col}:")
+    print(f"  Q1={Q1}, Q3={Q3}, IQR={IQR}")
+    print(f"  Lower Bound={lower_bound}, Upper Bound={upper_bound}")
+    print(f"  Number of Outliers: {len(outliers)}")
+    if len(outliers) > 0:
+        print(f"  Outlier Rows:\n{outliers[['math score', 'reading score', 'writing score']].head()}")
+
+# Box plots with outlier highlights
+print("\n📌 Box Plots with IQR Outlier Highlights:")
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+for i, col in enumerate(score_cols):
+    Q1 = outlier_summary[col]['Q1']
+    Q3 = outlier_summary[col]['Q3']
+    IQR = outlier_summary[col]['IQR']
+    lower = outlier_summary[col]['Lower Bound']
+    upper = outlier_summary[col]['Upper Bound']
+
+    outliers_mask = (df[col] < lower) | (df[col] > upper)
+    axes[i].boxplot(df[col], patch_artist=True,
+                    boxprops=dict(facecolor='lightblue'),
+                    medianprops=dict(color='red'))
+    axes[i].scatter([1] * outliers_mask.sum(),
+                    df.loc[outliers_mask, col],
+                    color='red', zorder=5, label='Outliers', s=30)
+    axes[i].set_title(f'{col}\nOutliers: {outliers_mask.sum()}')
+    axes[i].legend()
+plt.tight_layout()
+plt.savefig('student_models/iqr_outlier_boxplots.png')
+plt.show()
+
+print("\n✅ EDA and Outlier Detection complete!")
+
 # ================= FEATURE ENGINEERING =================
 df['avg_score'] = (df['math score'] + df['reading score'] + df['writing score']) / 3
 
