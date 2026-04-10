@@ -21,7 +21,7 @@ An end-to-end Machine Learning + Web Application that predicts student grades us
 - 1000 student records
 - Features:
   - Gender
-  - Race/Ethnicity
+  - Ethnicity/Race
   - Parental Education
   - Lunch Type
   - Test Preparation
